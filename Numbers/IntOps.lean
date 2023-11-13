@@ -1,9 +1,9 @@
 /- Operations as defined in the WASM specification:
     https://webassembly.github.io/spec/core/exec/numerics.html#integer-operations
 -/
-import Number.IntRepr
+import Numbers.IntRepr
 
-namespace Number.Unsigned
+namespace Numbers.Unsigned
 
 open Unsigned
 

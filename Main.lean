@@ -1,12 +1,13 @@
-import Number
+import Numbers
 
 def main : IO Unit := return ()
 
 namespace Test
 
-open Number
+open Numbers
 
-def x : Unsigned16 := -150 -- should be 1111111101101010 (2's comp), i.e. 65386
+def x : Unsigned16 := -150
+  -- should be 1111111101101010 (2's comp), i.e. 65386 when unsigned
 def y : Unsigned16 := 4
 def z : Signed16 := -150
 

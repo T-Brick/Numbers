@@ -1,4 +1,4 @@
-# Number
+# Numbers
 
 A library that implements WASM's specification of integers. Specifically this
 defines integers, both signed and unsigned, that can be selected to have an

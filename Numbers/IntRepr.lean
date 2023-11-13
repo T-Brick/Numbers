@@ -4,7 +4,7 @@
 import Std
 import Mathlib.Data.List.Basic
 
-namespace Number
+namespace Numbers
 
 def Unsigned (n : {i : Nat // 0 < i}) := Fin (2 ^ n)
 instance : Inhabited (Unsigned n) := ⟨0, by simp⟩

@@ -1,16 +1,16 @@
 import Lake
 open Lake DSL
 
-package number {
+package numbers {
   -- add package configuration options here
 }
 
-lean_lib Number {
+lean_lib Numbers {
   -- add library configuration options here
 }
 
 -- @[defaultTarget]
-lean_exe number {
+lean_exe numbers {
   root := `Main
 }
 

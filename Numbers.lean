@@ -1,7 +1,7 @@
-import Number.IntRepr
-import Number.IntOps
+import Numbers.IntRepr
+import Numbers.IntOps
 
-open Number
+open Numbers
 
 abbrev Unsigned8     := Unsigned ⟨8, by simp⟩
 abbrev Unsigned16    := Unsigned ⟨16, by simp⟩
