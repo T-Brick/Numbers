@@ -33,16 +33,24 @@ def mul (i₁ i₂ : Unsigned n) : Unsigned n :=
 instance : Mul (Unsigned n) := ⟨mul⟩
 
 def divOpt (i j : Unsigned n) : Option (Unsigned n) :=
-  match Unsigned.compare (ofNat 0) j with
-  | .eq => .none
-  | _   => .some <| ofNat (i.toNat / j.toNat)
+  if j.toNat = 0 then .none else .some <| ofNat (i.toNat / j.toNat)
 instance : HDiv (Unsigned n) (Unsigned n) (Option (Unsigned n)) := ⟨divOpt⟩
 
+def div (i j : Unsigned n) (neqz : j.toNat ≠ 0) : Unsigned n :=
+  match h : divOpt i j with
+  | .none   => by simp [divOpt] at h; contradiction
+  | .some k => k
+
 def remOpt (i j : Unsigned n) : Option (Unsigned n) :=
-  match Unsigned.compare (ofNat 0) j with
-  | .eq => .none
-  | _   => .some <| ofNat (i.toNat - j.toNat * (i.toNat / j.toNat))
+  if j.toNat = 0
+  then .none
+  else .some <| ofNat (i.toNat - j.toNat * (i.toNat / j.toNat))
 instance : HMod (Unsigned n) (Unsigned n) (Option (Unsigned n)) := ⟨remOpt⟩
+
+def rem (i j : Unsigned n) (neqz : j.toNat ≠ 0) : Unsigned n :=
+  match h : remOpt i j with
+  | .none   => by simp [remOpt] at h; contradiction
+  | .some k => k
 
 def and (i₁ i₂ : Unsigned n) : Unsigned n :=
   ⟨(i₁.val &&& i₂.val) % MAX n, mod_size⟩
@@ -146,6 +154,11 @@ def subsat (i₁ i₂ : Unsigned n) : Unsigned n := sat (i₁.val - i₂.val)
 def avgr (i₁ i₂ : Unsigned n)   : Unsigned n :=
   Unsigned.ofNat ((i₁.val + i₂.val + 1) / 2)
 
+partial def toLEB128 (n : Unsigned N) : List UInt8 :=
+  if n < 128 then [UInt8.ofNat n.toNat] else
+     UInt8.ofNat (n.toNat % 128 + 128)
+  :: toLEB128 (div n 128 (by sorry))
+
 end Unsigned
 
 namespace Signed
@@ -174,23 +187,33 @@ def mul : Signed n → Signed n → Signed n :=
 instance : Mul (Signed n) := ⟨mul⟩
 
 def divOpt (i j : Signed n) : Option (Signed n) :=
-  match Signed.compare (.ofUnsignedN 0) j with
-  | .eq => .none
-  | _   => validate (i.toInt / j.toInt)
+  if j = 0 then .none else validate (i.toInt / j.toInt)
 where validate (res : ℤ) : Option (Signed n) :=
   if res = -(MIN_VALUE : Signed n).toInt
   then .none
   else .some (.ofInt res)
 instance : HDiv (Signed n) (Signed n) (Option (Signed n)) := ⟨divOpt⟩
 
+def div (i j : Signed n) (neqz : j ≠ 0)
+    (repr : i.toInt / j.toInt ≠ -(MIN_VALUE : Signed n).toInt)
+    : Signed n :=
+  match h : divOpt i j with
+  | .none   => by
+    simp [divOpt, divOpt.validate] at h
+    have := h neqz repr
+    contradiction
+  | .some k => k
+
 def remOpt (i j : Signed n) : Option (Signed n) :=
-  match Signed.compare (.ofUnsignedN 0) j with
-  | .eq => .none
-  | _   => .some <| (i.toInt - j.toInt * (i.toInt / j.toInt)) |> .ofInt
+  if j = 0
+  then .none
+  else .some <| (i.toInt - j.toInt * (i.toInt / j.toInt)) |> .ofInt
 instance : HMod (Signed n) (Signed n) (Option (Signed n)) := ⟨remOpt⟩
 
-def rem (i j : Signed n) (h : j ≠ 0) : Signed n :=
-  (i.toInt - j.toInt * (i.toInt / j.toInt)) |> .ofInt
+def rem (i j : Signed n) (neqz : j ≠ 0) : Signed n :=
+  match h : remOpt i j with
+  | .none   => by simp [remOpt] at h; contradiction
+  | .some k => k
 
 
 def and : Signed n → Signed n → Signed n :=
@@ -273,5 +296,11 @@ def max (i₁ i₂ : Signed n) : Signed n :=
 
 def addsat (i₁ i₂ : Signed n) : Signed n := sat (i₁.toInt + i₂.toInt)
 def subsat (i₁ i₂ : Signed n) : Signed n := sat (i₁.toInt - i₂.toInt)
+
+def toLEB128 (n : Signed N) : List UInt8 := Unsigned.toLEB128 n.toUnsignedN
+  -- if n.toUnsignedN < 128 then [UInt8.ofNat n.toUnsignedN.toNat] else
+  -- let n' : Signed N := n >>> (7 : Signed N)
+  -- let lower : Unsigned N := n.toUnsignedN &&& (0x7F : Unsigned N)
+  -- UInt8.ofNat (lower ||| (0x80 : Unsigned N)).toNat :: toLEB128 n'
 
 end Signed

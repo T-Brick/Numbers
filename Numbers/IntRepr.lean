@@ -52,6 +52,17 @@ def deq (i j : Unsigned n) :=
   | isFalse h => isFalse (Fin.ne_of_val_ne h)
 instance : DecidableEq (Unsigned n) := deq
 
+def ofLEB128 (N : { i // 0 < i }) (seq : List UInt8) : Option (Unsigned N) := do
+  match seq with
+  | [] => .none
+  | n :: rest =>
+    if n < 128 && n.toNat < MAX N then
+      return ofNat n.toNat
+    else if h : n ≥ 128 ∧ N.val > 7 then
+      let m ← ofLEB128 ⟨N.val - 7, by simp [h]⟩ rest
+      return (ofNat (m.toNat * 128 + (n.toNat - 128)))
+    else .none
+
 end Unsigned
 
 
@@ -132,6 +143,21 @@ nonrec def compare (i j : Signed n) : Ordering :=
 instance : Ord (Signed n)  := ⟨compare⟩
 instance : LT  (Signed n)  := ltOfOrd
 instance : LE  (Signed n)  := leOfOrd
+
+def ofLEB128 (N : { i // 0 < i }) (seq : List UInt8) : Option (Signed N) := do
+  Unsigned.ofLEB128 N seq |>.map Signed.ofUnsignedN
+  -- match seq with
+  -- | [] => .none
+  -- | n :: rest =>
+    -- let max : Nat := 2 ^ (N - 1)
+    -- if n < 64 && n.toNat < max then
+      -- return ofInt n.toNat
+    -- else if 64 ≤ n.toNat && n.toNat < 128 && n.toNat ≥ 128 - max then
+      -- return ofInt (n.toNat - 128)
+    -- else if h : n ≥ 128 ∧ N.val > 7 then
+      -- let m ← ofLEB128 ⟨N.val - 7, by simp [h]⟩ rest
+      -- return ofInt (m.toNat * 128 + (n.toNat - 128))
+    -- else .none
 
 end Signed
 
