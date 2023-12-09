@@ -2,6 +2,7 @@ import Numbers
 
 def main : IO Unit := return ()
 
+/-
 namespace Test
 
 open Numbers
@@ -19,3 +20,4 @@ def z : Signed16 := -150
 #eval -x % (2 : Unsigned16)
 
 #eval (Signed.MIN_VALUE : Signed32) / (-1 : Signed32)
+-/

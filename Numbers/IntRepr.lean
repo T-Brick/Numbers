@@ -3,10 +3,11 @@
 -/
 import Std
 import Mathlib.Data.List.Basic
+import Mathlib.Tactic
 
 namespace Numbers
 
-def Unsigned (n : {i : Nat // 0 < i}) := Fin (2 ^ n)
+def Unsigned (n : {i : Nat // 0 < i}) := Fin (2 ^ n.val)
 instance : Inhabited (Unsigned n) := ⟨0, by simp⟩
 
 namespace Unsigned
@@ -15,14 +16,14 @@ def ofNat (u : Nat) : Unsigned n :=
   Fin.ofNat' u (Nat.pos_pow_of_pos n (Nat.zero_lt_succ 1))
 def toNat (u : Unsigned n) : Nat := u.val
 
-def MAX_VALUE : Unsigned n := ofNat (2 ^ n - 1)
+def MAX_VALUE : Unsigned n := ofNat (2 ^ n.val - 1)
 def MIN_VALUE : Unsigned n := ofNat 0
 def MAX (n : { i // 0 < i }) : Nat := 2 ^ n.val
 def MIN (_ : { i // 0 < i }) : Nat := 0
 
 def toInt (i : Unsigned n) : Int := i.toNat
 def toUInt32 (i : Unsigned ⟨32, by simp⟩) : UInt32 := UInt32.ofNat' (i.toNat) (by
-  have h : 4294967296 = 2 ^ 32 := by simp
+  have h : 4294967296 = 2 ^ 32 := by linarith
   rw [UInt32.size, h, toNat]
   exact i.isLt
 )
@@ -78,8 +79,8 @@ namespace Signed
 @[inline] def toUnsignedN : Signed n → Unsigned n :=
   cast (by unfold Signed; rfl) id
 
-def MAX_VALUE : Signed n  := ofUnsignedN <| .ofNat (2^(n - 1) - 1)
-def MIN_VALUE : Signed n  := ofUnsignedN <| .ofNat (2^(n - 1))
+def MAX_VALUE : Signed n  := ofUnsignedN <| .ofNat (2^(n.val - 1) - 1)
+def MIN_VALUE : Signed n  := ofUnsignedN <| .ofNat (2^(n.val - 1))
 
 def toInt (i : Signed n) : Int :=
   if i.toUnsignedN < MIN_VALUE.toUnsignedN
@@ -87,26 +88,26 @@ def toInt (i : Signed n) : Int :=
   else i.toUnsignedN.toInt - Int.ofNat (2 ^ n.val)
 
 def ofInt? (i : Int) : Option (Signed n) :=
-  let offset := i + (2 ^ (n - 1) : Nat)
+  let offset := i + (2 ^ (n.val - 1) : Nat)
   if h : 0 ≤ offset && offset < Unsigned.MAX n then
     let offset : Signed n := ⟨offset.natAbs, by
       simp at *
       have := Int.natAbs_lt_natAbs_of_nonneg_of_lt h.1 h.2
       rw [Unsigned.MAX] at *
       exact this⟩
-    .some <| ofUnsignedN (Unsigned.ofNat (offset.val + (2 ^ (n - 1))))
+    .some <| ofUnsignedN (Unsigned.ofNat (offset.val + (2 ^ (n.val - 1))))
   else
     none
 
 def ofInt (i : Int) : Signed n :=
-  let offset := i + (2 ^ (n - 1) : Nat)
+  let offset := i + (2 ^ (n.val - 1) : Nat)
   if h : 0 ≤ offset && offset < Unsigned.MAX n then
     let offset : Unsigned n := ⟨offset.natAbs, by
       simp at *
       have := Int.natAbs_lt_natAbs_of_nonneg_of_lt h.1 h.2
       rw [Unsigned.MAX] at *
       exact this⟩
-    ofUnsignedN (Unsigned.ofNat (offset.val + (2 ^ (n - 1))))
+    ofUnsignedN (Unsigned.ofNat (offset.val + (2 ^ (n.val - 1))))
   else
     ⟨0, by simp⟩
 

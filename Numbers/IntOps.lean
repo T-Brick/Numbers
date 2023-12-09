@@ -200,7 +200,7 @@ def div (i j : Signed n) (neqz : j ≠ 0)
   match h : divOpt i j with
   | .none   => by
     simp [divOpt, divOpt.validate] at h
-    have := h neqz repr
+    have := h neqz
     contradiction
   | .some k => k
 
