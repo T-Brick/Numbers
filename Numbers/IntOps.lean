@@ -3,6 +3,16 @@
 -/
 import Numbers.IntRepr
 
+private def hexstring := "0123456789ABCDEF"
+
+partial def Nat.toHexNumString (v : Nat) : String :=
+  if v = 0 then "0" else ⟨aux v |>.reverse⟩
+where aux (n : Nat) : List Char :=
+  if n ≤ 0 then [] else
+  (hexstring.get! ⟨n % 16⟩) :: aux (n / 16)
+
+def Nat.toHexString (v : Nat) : String := "0x" ++ Nat.toHexNumString v
+
 namespace Numbers.Unsigned
 
 open Unsigned
@@ -159,6 +169,18 @@ partial def toLEB128 (n : Unsigned N) : List UInt8 :=
      UInt8.ofNat (n.toNat % 128 + 128)
   :: toLEB128 (div n 128 (by sorry))
 
+def ofLEB128 (N : { i // 0 < i }) (seq : List UInt8)
+    : Option (Unsigned N × List UInt8) := do
+  match seq with
+  | [] => .none
+  | n :: rest =>
+    if n < 128 && n.toNat < MAX N then
+      return (ofNat n.toNat, rest)
+    else if h : n ≥ 128 ∧ N.val > 7 then
+      let (m, after) ← ofLEB128 ⟨N.val - 7, by simp [h]⟩ rest
+      return (ofNat (m.toNat * 128 + (n.toNat - 128)), after)
+    else .none
+
 end Unsigned
 
 namespace Signed
@@ -240,7 +262,7 @@ def shl : Signed n → Signed n → Signed n :=
 instance : HShiftLeft (Signed n) (Signed n) (Signed n) := ⟨shl⟩
 
 def shr (i₁ i₂ : Signed n) : Signed n :=
-  ⟨((i₁.val >>> i₂.val) ||| (i₁.val &&& 1 <<< 31)) % Unsigned.MAX n, Unsigned.mod_size⟩
+  Signed.ofInt (i₁.toInt >>> i₂.toInt)
 instance : HShiftRight (Signed n) (Signed n) (Signed n) := ⟨shr⟩
 
 def rotl : Signed n → Signed n → Signed n :=
@@ -297,10 +319,33 @@ def max (i₁ i₂ : Signed n) : Signed n :=
 def addsat (i₁ i₂ : Signed n) : Signed n := sat (i₁.toInt + i₂.toInt)
 def subsat (i₁ i₂ : Signed n) : Signed n := sat (i₁.toInt - i₂.toInt)
 
-def toLEB128 (n : Signed N) : List UInt8 := Unsigned.toLEB128 n.toUnsignedN
-  -- if n.toUnsignedN < 128 then [UInt8.ofNat n.toUnsignedN.toNat] else
-  -- let n' : Signed N := n >>> (7 : Signed N)
-  -- let lower : Unsigned N := n.toUnsignedN &&& (0x7F : Unsigned N)
-  -- UInt8.ofNat (lower ||| (0x80 : Unsigned N)).toNat :: toLEB128 n'
+partial def toLEB128 (n : Signed N) : List UInt8 :=
+  let n'   := n >>> (7 : Signed N)
+  let byte := n &&& 0x7F
+  if (n' == 0 && byte &&& 0x40 == 0) || (n' == -1 && byte &&& 0x40 != 0)
+  then UInt8.ofNat byte.toUnsignedN.toNat :: []
+  else UInt8.ofNat (byte ||| (0x80 : Signed N)).toNat :: toLEB128 n'
+
+def ofLEB128 (N : { i // 0 < i }) (seq : List UInt8)
+    : Option (Signed N × List UInt8) :=
+  process seq 0 0
+where process (seq : List UInt8)
+              (result : Signed N)
+              (shift : Signed N)
+              : Option (Signed N × List UInt8) :=
+  match seq with
+  | []        => .none
+  | byte :: rest =>
+    let byte_data : Signed N := Signed.ofNat (byte.toNat &&& 0x7F)
+    let result' := result ||| (byte_data <<< shift)
+    let shift' := shift + 7
+    if byte &&& 0x80 != 0
+    then process rest result' shift'
+    else if shift'.toNat < N && byte &&& 0x40 != 0
+    then
+      let sign_ext := (Signed.ofInt (-1) : Signed N) <<< shift'
+      .some (result' ||| sign_ext, rest)
+    else .some (result', rest)
+
 
 end Signed

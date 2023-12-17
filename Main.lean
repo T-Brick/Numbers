@@ -19,5 +19,13 @@ def z : Signed16 := -150
 
 #eval -x % (2 : Unsigned16)
 
-#eval (Signed.MIN_VALUE : Signed32) / (-1 : Signed32)
+#eval (Unsigned.MAX_VALUE : Unsigned32)
+
+#eval ((Signed.ofInt ((-65213 : Int) >>> 5)) : Signed32)
+
+#eval (4294967288 : Unsigned32).toLEB128
+#eval (624485 : Signed32).toLEB128
+#eval (([0xC0, 0xBB, 0x78] |> Signed.ofLEB128 ⟨32, by simp⟩))
+#eval [0x9b, 0xf1, 0x59]
+#eval (((-624485 : Signed32).toLEB128) |> Signed.ofLEB128 ⟨32, by simp⟩)
 -/
