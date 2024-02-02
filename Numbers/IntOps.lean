@@ -177,8 +177,8 @@ def ofLEB128 (N : { i // 0 < i }) (seq : List UInt8)
     if n < 128 && n.toNat < MAX N then
       return (ofNat n.toNat, rest)
     else if h : n ≥ 128 ∧ N.val > 7 then
-      let (m, after) ← ofLEB128 ⟨N.val - 7, by simp [h]⟩ rest
-      return (ofNat (m.toNat * 128 + (n.toNat - 128)), after)
+      let ⟨m, h_after⟩ ← ofLEB128 ⟨N.val - 7, by simp [h]⟩ rest
+      return (ofNat (m.toNat * 128 + (n.toNat - 128)), h_after)
     else .none
 
 end Unsigned
