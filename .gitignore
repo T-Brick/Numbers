@@ -1,5 +1,2 @@
-/build
-/lean_packages/*
-!/lean_packages/manifest.json
 /.lake
 .DS_Store

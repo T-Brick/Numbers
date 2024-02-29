@@ -177,7 +177,8 @@ def ofLEB128 (N : { i // 0 < i }) (seq : List UInt8)
     if n < 128 && n.toNat < MAX N then
       return (ofNat n.toNat, rest)
     else if h : n ≥ 128 ∧ N.val > 7 then
-      let ⟨m, h_after⟩ ← ofLEB128 ⟨N.val - 7, by simp [h]⟩ rest
+      let ⟨m, h_after⟩ ←
+        ofLEB128 ⟨N.val - 7, Nat.zero_lt_sub_of_lt h.right⟩ rest
       return (ofNat (m.toNat * 128 + (n.toNat - 128)), h_after)
     else .none
 
@@ -210,7 +211,7 @@ instance : Mul (Signed n) := ⟨mul⟩
 
 def divOpt (i j : Signed n) : Option (Signed n) :=
   if j = 0 then .none else validate (i.toInt / j.toInt)
-where validate (res : ℤ) : Option (Signed n) :=
+where validate (res : Int) : Option (Signed n) :=
   if res = -(MIN_VALUE : Signed n).toInt
   then .none
   else .some (.ofInt res)
@@ -262,7 +263,7 @@ def shl : Signed n → Signed n → Signed n :=
 instance : HShiftLeft (Signed n) (Signed n) (Signed n) := ⟨shl⟩
 
 def shr (i₁ i₂ : Signed n) : Signed n :=
-  Signed.ofInt (i₁.toInt >>> i₂.toInt)
+  Signed.ofInt (i₁.toInt >>> i₂.toNat)
 instance : HShiftRight (Signed n) (Signed n) (Signed n) := ⟨shr⟩
 
 def rotl : Signed n → Signed n → Signed n :=

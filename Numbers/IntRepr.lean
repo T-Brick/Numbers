@@ -2,13 +2,19 @@
     https://webassembly.github.io/spec/core/syntax/values.html#integers
 -/
 import Std
-import Mathlib.Data.List.Basic
-import Mathlib.Tactic
 
 namespace Numbers
 
+theorem zero_lt_bit_length : ∀ n : {i : Nat // 0 < i}, 0 < 2 ^ n.val := by
+  intro n
+  induction n.val with
+  | zero => decide
+  | succ n ih =>
+    rw [←Nat.pow_eq, Nat.pow]
+    exact Nat.mul_lt_mul_of_lt_of_le' ih (by decide) (Nat.lt_succ_self 0)
+
 def Unsigned (n : {i : Nat // 0 < i}) := Fin (2 ^ n.val)
-instance : Inhabited (Unsigned n) := ⟨0, by simp⟩
+instance : Inhabited (Unsigned n) := ⟨0, zero_lt_bit_length _⟩
 
 namespace Unsigned
 
@@ -22,14 +28,16 @@ def MAX (n : { i // 0 < i }) : Nat := 2 ^ n.val
 def MIN (_ : { i // 0 < i }) : Nat := 0
 
 def toInt (i : Unsigned n) : Int := i.toNat
-def toUInt32 (i : Unsigned ⟨32, by simp⟩) : UInt32 := UInt32.ofNat' (i.toNat) (by
-  have h : 4294967296 = 2 ^ 32 := by linarith
-  rw [UInt32.size, h, toNat]
-  exact i.isLt
-)
+def toUInt32 (i : Unsigned ⟨32, Nat.zero_lt_succ 31⟩) : UInt32 :=
+  UInt32.ofNat' (i.toNat) (by
+    have h : 4294967296 = 2 ^ 32 := by decide
+    rw [UInt32.size, h, toNat]
+    exact i.isLt
+  )
+
 def ofInt (i : Int) : Unsigned n := ofNat (i.toNat)
 def ofInt? (i : Int) : Option (Unsigned n) :=
-  let size := 2 ^ (n : Nat)
+  let size := Int.ofNat (2 ^ (n : Nat))
   if i < size then i.toNat'.map .ofNat else .none
 
 instance : OfNat (Unsigned n) m where
@@ -97,15 +105,15 @@ def ofInt (i : Int) : Signed n :=
       exact this⟩
     ofUnsignedN (Unsigned.ofNat (offset.val + (2 ^ (n.val - 1))))
   else
-    ⟨0, by simp⟩
+    ⟨0, zero_lt_bit_length _⟩
 
 def ofNat? (n : Nat) : Option (Signed m) := ofInt? n
 def ofNat : Nat → Signed m := .ofUnsignedN ∘ .ofNat
 instance : OfNat (Signed n) m := ⟨ofNat m⟩
 
-instance : Coe (Signed ⟨32, by simp⟩) Int := ⟨toInt⟩
-instance : Coe (Signed ⟨32, by simp⟩) UInt32 := ⟨Unsigned.toUInt32⟩
-instance : Coe (Signed ⟨64, by simp⟩) Int := ⟨toInt⟩
+instance : Coe (Signed ⟨32, by decide⟩) Int := ⟨toInt⟩
+instance : Coe (Signed ⟨32, by decide⟩) UInt32 := ⟨Unsigned.toUInt32⟩
+instance : Coe (Signed ⟨64, by decide⟩) Int := ⟨toInt⟩
 instance : Repr (Signed n) := ⟨reprPrec ∘ toInt⟩
 
 nonrec def toString : Signed n → String := toString ∘ toInt

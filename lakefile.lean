@@ -9,10 +9,9 @@ lean_lib Numbers {
   -- add library configuration options here
 }
 
--- @[defaultTarget]
+@[default_target]
 lean_exe numbers {
   root := `Main
 }
 
-require mathlib from git
-  "https://github.com/leanprover-community/mathlib4" @ "v4.5.0"
+require std from git "https://github.com/leanprover/std4" @ "v4.5.0"
