@@ -14,4 +14,4 @@ lean_exe numbers {
   root := `Main
 }
 
-require std from git "https://github.com/leanprover/std4" @ "v4.6.0-rc1"
+require std from git "https://github.com/leanprover/std4" @ "v4.6.0"
