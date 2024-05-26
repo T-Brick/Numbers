@@ -14,4 +14,4 @@ lean_exe numbers {
   root := `Main
 }
 
-require std from git "https://github.com/leanprover/std4" @ "v4.7.0"
+require batteries from git "https://github.com/leanprover-community/batteries" @ "v4.7.0"
