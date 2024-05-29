@@ -107,8 +107,8 @@ def ofInt (i : Int) : Signed n :=
   else
     ⟨0, zero_lt_bit_length _⟩
 
-def ofNat? (n : Nat) : Option (Signed m) := ofInt? n
-def ofNat : Nat → Signed m := .ofUnsignedN ∘ .ofNat
+def ofNat? (m : Nat) : Option (Signed n) := ofInt? m
+def ofNat : Nat → Signed n := .ofUnsignedN ∘ .ofNat
 instance : OfNat (Signed n) m := ⟨ofNat m⟩
 
 instance : Coe (Signed ⟨32, by decide⟩) Int := ⟨toInt⟩
@@ -146,3 +146,18 @@ instance : LE  (Signed n)  := leOfOrd
 end Signed
 
 @[reducible] def Uninterpreted := Unsigned -- 'iN' in the reference
+
+abbrev Unsigned8     := Unsigned ⟨8 , by decide⟩
+abbrev Unsigned16    := Unsigned ⟨16, by decide⟩
+abbrev Unsigned32    := Unsigned ⟨32, by decide⟩
+abbrev Unsigned64    := Unsigned ⟨64, by decide⟩
+
+abbrev Signed8       := Signed ⟨8 , by decide⟩
+abbrev Signed16      := Signed ⟨16, by decide⟩
+abbrev Signed32      := Signed ⟨32, by decide⟩
+abbrev Signed64      := Signed ⟨64, by decide⟩
+
+abbrev Int8  := Signed8
+abbrev Int16 := Signed16
+abbrev Int32 := Signed32
+abbrev Int64 := Signed64
