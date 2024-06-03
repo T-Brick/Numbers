@@ -1,7 +1,7 @@
 /- Encoding of defintion WASM's definition of integers:
     https://webassembly.github.io/spec/core/syntax/values.html#integers
 -/
-import Std
+import Batteries
 
 namespace Numbers
 
