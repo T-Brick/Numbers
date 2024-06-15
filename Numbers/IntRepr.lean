@@ -1,8 +1,6 @@
 /- Encoding of defintion WASM's definition of integers:
     https://webassembly.github.io/spec/core/syntax/values.html#integers
 -/
-import Std
-
 namespace Numbers
 
 theorem zero_lt_bit_length : ∀ n : {i : Nat // 0 < i}, 0 < 2 ^ n.val := by
