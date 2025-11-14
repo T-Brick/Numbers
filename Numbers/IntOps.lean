@@ -175,8 +175,8 @@ def ge (i₁ i₂ : Unsigned n) : Unsigned n :=
 
 -- CONVERSION
 
-def extend [NeZero m] (i : Unsigned n) : Unsigned m := .ofNat i.toNat
-def wrap   [NeZero m] (i : Unsigned n) : Unsigned m := .ofNat (i.val % MAX n)
+def extend (i : Unsigned n) : Unsigned m := .ofNat i.toNat
+def wrap   (i : Unsigned n) : Unsigned m := .ofNat (i.val % MAX n)
 
 -- MISC FUNCTIONS
 
@@ -393,8 +393,8 @@ def ge (i₁ i₂ : Signed n) : Signed n :=
 
 -- CONVERSION FUNCTIONS
 
-def extend [NeZero m] (i : Signed n) : Signed m := .ofInt i.toInt
-def wrap [NeZero m] : Signed n → Signed m :=
+def extend (i : Signed n) : Signed m := .ofInt i.toInt
+def wrap : Signed n → Signed m :=
   cast (by unfold Signed; rfl) Unsigned.wrap
 
 -- MISC FUNCTIONS
