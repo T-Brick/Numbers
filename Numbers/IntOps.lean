@@ -22,9 +22,9 @@ def sat (i : Int) : Unsigned n :=
 
 theorem mod_size : x % MAX n < Nat.pow 2 n := by
   rw [MAX]
-  exact Nat.mod_lt x (Nat.pos_pow_of_pos n (Nat.zero_lt_succ 1))
+  exact Nat.mod_lt x (Nat.pow_pos (a:=2) (by decide))
 
-def add (i₁ i₂ : Unsigned n) : Unsigned n :=
+def add(i₁ i₂ : Unsigned n) : Unsigned n :=
   ⟨(i₁.val + i₂.val) % MAX n, mod_size⟩
 instance : HAdd (Unsigned n) (Unsigned n) (Unsigned n) := ⟨add⟩
 instance : HAdd (Unsigned n) Nat (Unsigned n) := ⟨(add · <| Unsigned.ofNat ·)⟩
@@ -56,7 +56,8 @@ instance : HDiv Nat (Unsigned n) (Option (Unsigned n)) :=
 
 def div (i j : Unsigned n) (neqz : j.toNat ≠ 0) : Unsigned n :=
   match h : divOpt i j with
-  | .none   => by simp only [divOpt, ite_eq_left_iff] at h; contradiction
+  | .none   => by simp only [ divOpt, ite_eq_left_iff, reduceCtorEq, imp_false,
+                              Decidable.not_not] at h; contradiction
   | .some k => k
 
 def remOpt (i j : Unsigned n) : Option (Unsigned n) :=
@@ -71,7 +72,8 @@ instance : HMod Nat (Unsigned n) (Option (Unsigned n)) :=
 
 def rem (i j : Unsigned n) (neqz : j.toNat ≠ 0) : Unsigned n :=
   match h : remOpt i j with
-  | .none   => by simp only [remOpt, ite_eq_left_iff] at h; contradiction
+  | .none   => by simp only [ remOpt, ite_eq_left_iff, reduceCtorEq, imp_false,
+                              Decidable.not_not] at h; contradiction
   | .some k => k
 
 def and (i₁ i₂ : Unsigned n) : Unsigned n :=
@@ -131,7 +133,7 @@ def rotr (i₁ i₂ : Unsigned n) : Unsigned n :=
 
 -- not doing the efficient datalab solution, also a little scuffed anyway
 def clz (i : Unsigned n) : Unsigned n :=
-  Unsigned.ofNat (n - (clz_helper i n.val))
+  Unsigned.ofNat (n - (clz_helper i n))
 where clz_helper (i : Unsigned n) (c : Nat) : Nat :=
   if h : c = 0
   then c
@@ -140,7 +142,7 @@ where clz_helper (i : Unsigned n) (c : Nat) : Nat :=
   else clz_helper i (c - 1)
 
 def ctz (i : Unsigned n) : Unsigned n :=
-  Unsigned.ofNat (n - (ctz_helper i n.val))
+  Unsigned.ofNat (n - (ctz_helper i n))
 where ctz_helper (i : Unsigned n) (c : Nat) : Nat :=
   if h : c = 0
   then c
@@ -178,8 +180,8 @@ def ge (i₁ i₂ : Unsigned n) : Unsigned n :=
 
 -- CONVERSION
 
-def extend (i : Unsigned n) : Unsigned m := .ofNat i.toNat
-def wrap   (i : Unsigned n) : Unsigned m := .ofNat (i.val % MAX n)
+def extend [NeZero m] (i : Unsigned n) : Unsigned m := .ofNat i.toNat
+def wrap   [NeZero m] (i : Unsigned n) : Unsigned m := .ofNat (i.val % MAX n)
 
 -- MISC FUNCTIONS
 
@@ -200,18 +202,17 @@ def avgr (i₁ i₂ : Unsigned n)   : Unsigned n :=
   Unsigned.ofNat ((i₁.val + i₂.val + 1) / 2)
 
 theorem toNat_ofNat_neq_zero
-    {n : { i // 0 < i }}
     (u : Nat)
-    (h : u % 2 ^ n.val ≠ 0)
+    (h : u % 2 ^ n ≠ 0)
     : toNat ((ofNat u) : Unsigned n) ≠ 0 := by
-  simp only [toNat, ofNat, Fin.val_ofNat']
+  simp only [toNat, ofNat, Fin.val_ofNat]
   exact h
 
 partial def toLEB128 (n : Unsigned N) : List UInt8 :=
   if n_size : n.val < 128 then [UInt8.ofNat n.toNat] else
     UInt8.ofNat (n.toNat % 128 + 128) :: toLEB128 (div n 128 (by
-      have : 128 % 2 ^ N.val ≠ 0 := by
-        if h : N.val < 8 then
+      have : 128 % 2 ^ N ≠ 0 := by
+        if h : N < 8 then
           have := n.isLt
           sorry
         else
@@ -220,16 +221,15 @@ partial def toLEB128 (n : Unsigned N) : List UInt8 :=
       simp only [OfNat.ofNat, this, ne_eq, not_false_eq_true]
     ))
 
-def ofLEB128 (N : { i // 0 < i }) (seq : List UInt8)
+def ofLEB128 (N : Nat) (seq : List UInt8)
     : Option (Unsigned N × List UInt8) := do
   match seq with
   | [] => .none
   | n :: rest =>
     if n < 128 && n.toNat < MAX N then
       return (ofNat n.toNat, rest)
-    else if h : n ≥ 128 ∧ N.val > 7 then
-      let ⟨m, h_after⟩ ←
-        ofLEB128 ⟨N.val - 7, Nat.zero_lt_sub_of_lt h.right⟩ rest
+    else if n ≥ 128 ∧ N - 7 > 0 then
+      let ⟨m, h_after⟩ ← ofLEB128 (N - 7) rest
       return (ofNat (m.toNat * 128 + (n.toNat - 128)), h_after)
     else .none
 
@@ -291,7 +291,8 @@ def div (i j : Signed n) (neqz : j ≠ 0)
     : Signed n :=
   match h : divOpt i j with
   | .none   => by
-    simp [divOpt, divOpt.validate] at h
+    simp only [ divOpt, divOpt.validate, ite_eq_left_iff, reduceCtorEq,
+                imp_false, Decidable.not_not ] at h
     have := h neqz
     contradiction
   | .some k => k
@@ -312,7 +313,8 @@ instance : HMod Int (Signed n) (Option (Signed n)) :=
 
 def rem (i j : Signed n) (neqz : j ≠ 0) : Signed n :=
   match h : remOpt i j with
-  | .none   => by simp [remOpt] at h; contradiction
+  | .none   => by simp only [ remOpt, ite_eq_left_iff, reduceCtorEq, imp_false,
+                              Decidable.not_not ] at h; contradiction
   | .some k => k
 
 
@@ -396,8 +398,9 @@ def ge (i₁ i₂ : Signed n) : Signed n :=
 
 -- CONVERSION FUNCTIONS
 
-def extend (i : Signed n) : Signed m := .ofInt i.toInt
-def wrap : Signed n → Signed m := cast (by unfold Signed; rfl) Unsigned.wrap
+def extend [NeZero m] (i : Signed n) : Signed m := .ofInt i.toInt
+def wrap [NeZero m] : Signed n → Signed m :=
+  cast (by unfold Signed; rfl) Unsigned.wrap
 
 -- MISC FUNCTIONS
 
@@ -425,7 +428,7 @@ partial def toLEB128 (n : Signed N) : List UInt8 :=
   then UInt8.ofNat byte.toUnsignedN.toNat :: []
   else UInt8.ofNat (byte ||| (0x80 : Signed N)).toNat :: toLEB128 n'
 
-def ofLEB128 (N : { i // 0 < i }) (seq : List UInt8)
+def ofLEB128 (N : Nat) (seq : List UInt8)
     : Option (Signed N × List UInt8) :=
   process seq 0 0
 where process (seq : List UInt8)

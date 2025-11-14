@@ -3,31 +3,23 @@
 -/
 namespace Numbers
 
-theorem zero_lt_bit_length : ∀ n : {i : Nat // 0 < i}, 0 < 2 ^ n.val := by
-  intro n
-  induction n.val with
-  | zero => decide
-  | succ n ih =>
-    rw [←Nat.pow_eq, Nat.pow]
-    exact Nat.mul_lt_mul_of_lt_of_le' ih (by decide) (Nat.lt_succ_self 0)
-
-def Unsigned (n : {i : Nat // 0 < i}) := Fin (2 ^ n.val)
-instance : Inhabited (Unsigned n) := ⟨0, zero_lt_bit_length _⟩
+def Unsigned (n : Nat) := Fin (2 ^ n)
+instance : Inhabited (Unsigned n) :=
+  ⟨0, Nat.pow_pos (a:=2) (by decide)⟩
 
 namespace Unsigned
 
-def ofNat (u : Nat) : Unsigned n :=
-  Fin.ofNat' u (Nat.pos_pow_of_pos n (Nat.zero_lt_succ 1))
-def toNat (u : Unsigned n) : Nat := u.val
+def ofNat (u : Nat) : Unsigned n := Fin.ofNat (2 ^ n) u
+def toNat(u : Unsigned n) : Nat := u.val
 
-def MAX_VALUE : Unsigned n := ofNat (2 ^ n.val - 1)
+def MAX_VALUE : Unsigned n := ofNat (2 ^ n - 1)
 def MIN_VALUE : Unsigned n := ofNat 0
-def MAX (n : { i // 0 < i }) : Nat := 2 ^ n.val
-def MIN (_ : { i // 0 < i }) : Nat := 0
+def MAX (n : Nat) : Nat := 2 ^ n
+def MIN (_ : Nat) : Nat := 0
 
 def toInt (i : Unsigned n) : Int := i.toNat
-def toUInt32 (i : Unsigned ⟨32, Nat.zero_lt_succ 31⟩) : UInt32 :=
-  UInt32.ofNat' (i.toNat) (by
+def toUInt32 (i : Unsigned 32) : UInt32 :=
+  UInt32.ofNatLT (i.toNat) (by
     have h : 4294967296 = 2 ^ 32 := by decide
     rw [UInt32.size, h, toNat]
     exact i.isLt
@@ -36,13 +28,13 @@ def toUInt32 (i : Unsigned ⟨32, Nat.zero_lt_succ 31⟩) : UInt32 :=
 def ofInt (i : Int) : Unsigned n := ofNat (i.toNat)
 def ofInt? (i : Int) : Option (Unsigned n) :=
   let size := Int.ofNat (2 ^ (n : Nat))
-  if i < size then i.toNat'.map .ofNat else .none
+  if i < size then i.toNat?.map .ofNat else .none
 
 instance : OfNat (Unsigned n) m where
   ofNat := Unsigned.ofNat m
-instance : Coe (Unsigned ⟨32, by simp⟩) Int := ⟨toInt⟩
-instance : Coe (Unsigned ⟨32, by simp⟩) UInt32 := ⟨toUInt32⟩
-instance : Coe (Unsigned ⟨64, by simp⟩) Int := ⟨toInt⟩
+instance : Coe (Unsigned 32) Int := ⟨toInt⟩
+instance : Coe (Unsigned 32) UInt32 := ⟨toUInt32⟩
+instance : Coe (Unsigned 64) Int := ⟨toInt⟩
 instance : Repr (Unsigned n) := ⟨reprPrec ∘ toNat⟩
 
 nonrec def toString : Unsigned n → String := toString ∘ toNat
@@ -63,8 +55,9 @@ end Unsigned
 
 
 /- Derived to a generic bit size from C0deine -/
-def Signed (n : {i : Nat // 0 < i}) := Unsigned n
-instance : Inhabited (Signed n) := ⟨0, Nat.pos_pow_of_pos n (Nat.zero_lt_succ 1)⟩
+def Signed (n : Nat) := Unsigned n
+instance : Inhabited (Signed n) :=
+  ⟨0, Nat.pow_pos (a:=2) (by decide)⟩
 
 namespace Signed
 
@@ -73,45 +66,45 @@ namespace Signed
 @[inline] def toUnsignedN : Signed n → Unsigned n :=
   cast (by unfold Signed; rfl) id
 
-def MAX_VALUE : Signed n  := ofUnsignedN <| .ofNat (2^(n.val - 1) - 1)
-def MIN_VALUE : Signed n  := ofUnsignedN <| .ofNat (2^(n.val - 1))
+def MAX_VALUE : Signed n  := ofUnsignedN <| .ofNat (2^(n - 1) - 1)
+def MIN_VALUE : Signed n  := ofUnsignedN <| .ofNat (2^(n - 1))
 
 def toInt (i : Signed n) : Int :=
   if i.toUnsignedN < MIN_VALUE.toUnsignedN
   then i.toUnsignedN.toNat -- i pos
-  else i.toUnsignedN.toInt - Int.ofNat (2 ^ n.val)
+  else i.toUnsignedN.toInt - Int.ofNat (2 ^ n)
 
 def ofInt? (i : Int) : Option (Signed n) :=
-  let offset := i + (2 ^ (n.val - 1) : Nat)
+  let offset := i + (2 ^ (n - 1) : Nat)
   if h : 0 ≤ offset && offset < Unsigned.MAX n then
     let offset : Signed n := ⟨offset.natAbs, by
-      simp at *
+      simp only [Bool.and_eq_true, decide_eq_true_eq] at h
       have := Int.natAbs_lt_natAbs_of_nonneg_of_lt h.1 h.2
-      rw [Unsigned.MAX] at *
+      rw [Unsigned.MAX] at this
       exact this⟩
-    .some <| ofUnsignedN (Unsigned.ofNat (offset.val + (2 ^ (n.val - 1))))
+    .some <| ofUnsignedN (Unsigned.ofNat (offset.val + (2 ^ (n - 1))))
   else
     none
 
 def ofInt (i : Int) : Signed n :=
-  let offset := i + (2 ^ (n.val - 1) : Nat)
+  let offset := i + (2 ^ (n - 1) : Nat)
   if h : 0 ≤ offset && offset < Unsigned.MAX n then
     let offset : Unsigned n := ⟨offset.natAbs, by
-      simp at *
+      simp only [Bool.and_eq_true, decide_eq_true_eq] at h
       have := Int.natAbs_lt_natAbs_of_nonneg_of_lt h.1 h.2
-      rw [Unsigned.MAX] at *
+      rw [Unsigned.MAX] at this
       exact this⟩
-    ofUnsignedN (Unsigned.ofNat (offset.val + (2 ^ (n.val - 1))))
+    ofUnsignedN (Unsigned.ofNat (offset.val + (2 ^ (n - 1))))
   else
-    ⟨0, zero_lt_bit_length _⟩
+    ⟨0, Nat.pow_pos (a:=2) (by decide)⟩
 
-def ofNat? (m : Nat) : Option (Signed n) := ofInt? m
+def ofNat?(m : Nat) : Option (Signed n) := ofInt? m
 def ofNat : Nat → Signed n := .ofUnsignedN ∘ .ofNat
 instance : OfNat (Signed n) m := ⟨ofNat m⟩
 
-instance : Coe (Signed ⟨32, by decide⟩) Int := ⟨toInt⟩
-instance : Coe (Signed ⟨32, by decide⟩) UInt32 := ⟨Unsigned.toUInt32⟩
-instance : Coe (Signed ⟨64, by decide⟩) Int := ⟨toInt⟩
+instance : Coe (Signed 32) Int := ⟨toInt⟩
+instance : Coe (Signed 32) UInt32 := ⟨Unsigned.toUInt32⟩
+instance : Coe (Signed 64) Int := ⟨toInt⟩
 instance : Repr (Signed n) := ⟨reprPrec ∘ toInt⟩
 
 nonrec def toString : Signed n → String := toString ∘ toInt
@@ -145,15 +138,15 @@ end Signed
 
 @[reducible] def Uninterpreted := Unsigned -- 'iN' in the reference
 
-abbrev Unsigned8     := Unsigned ⟨8 , by decide⟩
-abbrev Unsigned16    := Unsigned ⟨16, by decide⟩
-abbrev Unsigned32    := Unsigned ⟨32, by decide⟩
-abbrev Unsigned64    := Unsigned ⟨64, by decide⟩
+abbrev Unsigned8     := Unsigned 8
+abbrev Unsigned16    := Unsigned 16
+abbrev Unsigned32    := Unsigned 32
+abbrev Unsigned64    := Unsigned 64
 
-abbrev Signed8       := Signed ⟨8 , by decide⟩
-abbrev Signed16      := Signed ⟨16, by decide⟩
-abbrev Signed32      := Signed ⟨32, by decide⟩
-abbrev Signed64      := Signed ⟨64, by decide⟩
+abbrev Signed8       := Signed 8
+abbrev Signed16      := Signed 16
+abbrev Signed32      := Signed 32
+abbrev Signed64      := Signed 64
 
 abbrev Int8  := Signed8
 abbrev Int16 := Signed16
